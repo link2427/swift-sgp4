@@ -59,17 +59,23 @@ public struct TLE {
 }
 
 /// A model describing a satellite using geodetic coordinates
-public struct SatelliteData {
+public struct SatelliteData: Codable {
+    /// The geodetic latitude of the satellite
+    public let latitude: Double
 
-	/// The geodetic latitude of the satellite
-	public let latitude: Double
+    /// The geodetic longitude of the satellite
+    public let longitude: Double
 
-	/// The geodetic longitude of the satellite
-	public let longitude: Double
+    /// Satellite's speed expressed in km/h
+    public let speed: Double
 
-	/// Satellite's speed expressed in km/h
-	public let speed: Double
+    /// The altitude expressed in km
+    public let altitude: Double
 
-	/// The altitude expressed in km
-	public let altitude: Double
+    public init(latitude: Double, longitude: Double, speed: Double, altitude: Double) {
+        self.latitude = latitude
+        self.longitude = longitude
+        self.speed = speed
+        self.altitude = altitude
+    }
 }
