@@ -91,73 +91,61 @@ public final class TLEInterpreter: Sendable {
 	/// print(state.latitude, state.longitude, state.altitude, state.speed)
 	/// ```
 	public func satelliteData(from nativeTLE: TLE, date: Date) throws -> SatelliteData {
-        
-        let tle = createTLE(
-            std.string(nativeTLE.title),
-            std.string(nativeTLE.firstLine),
-            std.string(nativeTLE.secondLine)
+        let components = dateComponents(from: date)
+
+        let result = nativeTLE.title.withCString { title in
+            nativeTLE.firstLine.withCString { firstLine in
+                nativeTLE.secondLine.withCString { secondLine in
+                    sgp4SatelliteData(
+                        title,
+                        firstLine,
+                        secondLine,
+                        components.year,
+                        components.month,
+                        components.day,
+                        components.hour,
+                        components.minute,
+                        components.second,
+                        components.microsecond
+                    )
+                }
+            }
+        }
+
+        guard result.success else {
+            throw result.errorCode == 1 ? Error.tle : Error.satellite
+        }
+
+        return .init(
+            latitude: result.latitude,
+            longitude: result.longitude,
+            speed: result.speed,
+            altitude: result.altitude
         )
-        
-        guard let tleValue = tle.value else {
-            throw Error.tle
-        }
-        
-        let sgp4 = libsgp4.SGP4(tleValue)
-        
-        
-        let currentTime = dateTimeFrom(date)
-        
-        
-        return try satelliteDataFrom(sgp4: sgp4, date: currentTime)
-	}
-    
-    private func satelliteDataFrom(sgp4: libsgp4.SGP4, date: libsgp4.DateTime) throws -> SatelliteData {
-        let maybeEci = createEci(sgp4, date)
-        
-        guard let eci = maybeEci.value else {
-            throw Error.satellite
-        }
-        
-        let geo = eci.ToGeodetic()
-        
-        let velocity = eci.Velocity().Magnitude() * 3600.0
-        
-        let latitude = geo.latitude * 180.0 / .pi
-        let longitude = geo.longitude * 180.0 / .pi
-        let altitude = geo.altitude
-        
-        return .init(latitude: latitude, longitude: longitude, speed: velocity, altitude: altitude)
-        
     }
     
-    private func dateTimeFrom(_ date: Date) -> libsgp4.DateTime {
-        
+    private func dateComponents(from date: Date) -> (
+        year: Int32,
+        month: Int32,
+        day: Int32,
+        hour: Int32,
+        minute: Int32,
+        second: Int32,
+        microsecond: Int32
+    ) {
         var calendar = Calendar.current
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         
         let components = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second, .nanosecond], from: date)
         
-        let year = Int32(components.year ?? 0)
-        let month = Int32(components.month ?? 0)
-        let day = Int32(components.day ?? 0)
-        let hour = Int32(components.hour ?? 0)
-        let minute = Int32(components.minute ?? 0)
-        let second = Int32(components.second ?? 0)
-        let micro = Int32(components.nanosecond ?? 0) / 1000
-        
-        var dateTime = libsgp4.DateTime(
-            year,
-            month,
-            day,
-            hour,
-            minute,
-            second
+        return (
+            Int32(components.year ?? 0),
+            Int32(components.month ?? 0),
+            Int32(components.day ?? 0),
+            Int32(components.hour ?? 0),
+            Int32(components.minute ?? 0),
+            Int32(components.second ?? 0),
+            Int32(components.nanosecond ?? 0) / 1000
         )
-        
-        dateTime.Initialise(year, month, day, hour, minute, second, micro)
-        
-        
-        return dateTime
     }
 }
-

@@ -28,8 +28,7 @@ let package = Package(
 			name: "SGPKit",
 			dependencies: ["SGP4LibWrapper"],
             exclude: privacyManifestExclude,
-            resources: privacyManifestResource,
-            swiftSettings: [.interoperabilityMode(.Cxx)]
+            resources: privacyManifestResource
         ),
         .target(
             name: "SGP4LibWrapper",
@@ -47,8 +46,7 @@ let package = Package(
 			],
 			resources: [
 				.copy("Fixtures/Mocks")
-			],
-            swiftSettings: [.interoperabilityMode(.Cxx)]
+			]
 		)
 	],
     cxxLanguageStandard: .cxx17

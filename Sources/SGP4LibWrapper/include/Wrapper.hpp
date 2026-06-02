@@ -25,13 +25,37 @@
 #ifndef Wrapper_hpp
 #define Wrapper_hpp
 
-#include <Tle.h>
-#include <Eci.h>
-#include <SGP4.h>
-#include <DateTime.h>
-#include <optional>
+#include <stdbool.h>
+#include <stdint.h>
 
-std::optional<libsgp4::Tle> createTLE(std::string title, std::string firstLine, std::string secondLine);
-std::optional<libsgp4::Eci> createEci(libsgp4::SGP4, libsgp4::DateTime);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#endif /* TleWrapper_hpp */
+typedef struct SGP4SatelliteResult {
+    bool success;
+    int32_t errorCode;
+    double latitude;
+    double longitude;
+    double speed;
+    double altitude;
+} SGP4SatelliteResult;
+
+SGP4SatelliteResult sgp4SatelliteData(
+    const char *title,
+    const char *firstLine,
+    const char *secondLine,
+    int32_t year,
+    int32_t month,
+    int32_t day,
+    int32_t hour,
+    int32_t minute,
+    int32_t second,
+    int32_t microsecond
+);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* Wrapper_hpp */

@@ -23,27 +23,67 @@
  */
 
 #include "Wrapper.hpp"
-#include <string>
+#include <CoordGeodetic.h>
+#include <DateTime.h>
+#include <Eci.h>
+#include <SGP4.h>
+#include <SatelliteException.h>
+#include <Tle.h>
+#include <TleException.h>
+#include <exception>
 
-std::optional<libsgp4::Tle> createTLE(std::string title, std::string firstLine, std::string secondLine) {
-    try {
-        return libsgp4::Tle(title, firstLine, secondLine);
-    } catch (libsgp4::TleException& ex) {
-        return std::nullopt;
-    } catch (std::exception& ex) {
-        return std::nullopt;
-    }
+namespace {
+SGP4SatelliteResult failedResult(int32_t errorCode) {
+    return {
+        false,
+        errorCode,
+        0,
+        0,
+        0,
+        0
+    };
+}
 }
 
-std::optional<libsgp4::Eci> createEci(libsgp4::SGP4 sgp4, libsgp4::DateTime dateTime) {
-    
+SGP4SatelliteResult sgp4SatelliteData(
+    const char *title,
+    const char *firstLine,
+    const char *secondLine,
+    int32_t year,
+    int32_t month,
+    int32_t day,
+    int32_t hour,
+    int32_t minute,
+    int32_t second,
+    int32_t microsecond
+) {
     try {
-        auto position = sgp4.FindPosition(dateTime);
-        
-        return position;
-    } catch (libsgp4::SatelliteException& ex) {
-        return std::nullopt;
-    } catch (std::exception& ex) {
-        return std::nullopt;
+        libsgp4::Tle tle(
+            title == nullptr ? "" : title,
+            firstLine == nullptr ? "" : firstLine,
+            secondLine == nullptr ? "" : secondLine
+        );
+        libsgp4::SGP4 sgp4(tle);
+        libsgp4::DateTime dateTime(year, month, day, hour, minute, second);
+        dateTime.Initialise(year, month, day, hour, minute, second, microsecond);
+
+        libsgp4::Eci eci = sgp4.FindPosition(dateTime);
+        libsgp4::CoordGeodetic geo = eci.ToGeodetic();
+        double velocity = eci.Velocity().Magnitude() * 3600.0;
+
+        return {
+            true,
+            0,
+            geo.latitude * 180.0 / M_PI,
+            geo.longitude * 180.0 / M_PI,
+            velocity,
+            geo.altitude
+        };
+    } catch (libsgp4::TleException&) {
+        return failedResult(1);
+    } catch (libsgp4::SatelliteException&) {
+        return failedResult(2);
+    } catch (std::exception&) {
+        return failedResult(3);
     }
 }
