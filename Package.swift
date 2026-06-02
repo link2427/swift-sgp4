@@ -1,47 +1,55 @@
-// swift-tools-version: 5.5
+// swift-tools-version: 5.10
 
 import PackageDescription
 
+#if canImport(Darwin)
+let privacyManifestExclude: [String] = []
+let privacyManifestResource: [PackageDescription.Resource] = [.copy("PrivacyInfo.xcprivacy")]
+#else
+// Exclude on other platforms to avoid build warnings.
+let privacyManifestExclude: [String] = ["PrivacyInfo.xcprivacy"]
+let privacyManifestResource: [PackageDescription.Resource] = []
+#endif
+
 let package = Package(
 	name: "SGPKit",
-	platforms: [.iOS(.v13)],
+    platforms: [.iOS(.v13), .macOS(.v13)],
 	products: [
 		.library(
 			name: "SGPKit",
 			targets: ["SGPKit"])
 	],
 	dependencies: [
-		.package(url: "https://github.com/Quick/Nimble", .upToNextMajor(from: "10.0.0")),
-		.package(url: "https://github.com/Quick/Quick", .upToNextMajor(from: "5.0.0"))
+        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.4.0"),
+        .package(url: "https://github.com/apple/swift-numerics", from: "1.1.0"),
 	],
 	targets: [
 		.target(
 			name: "SGPKit",
-			dependencies: ["SGPKitOBJC"]),
+			dependencies: ["SGP4LibWrapper"],
+            exclude: privacyManifestExclude,
+            resources: privacyManifestResource,
+            swiftSettings: [.interoperabilityMode(.Cxx)]
+        ),
+        .target(
+            name: "SGP4LibWrapper",
+            dependencies: ["SGPKitCPP"]
+        ),
 		.target(
 			name: "SGPKitCPP",
-			path: "Sources/sgp4-f5cb54b"
+			path: "Sources/sgp4Lib"
 		),
-		.target(
-			name: "SGPKitOBJC",
-			dependencies: ["SGPKitCPP"],
-			path: "Sources/OBJC"),
 		.testTarget(
 			name: "SGPKitTests",
 			dependencies: [
 				"SGPKit",
-				.product(name: "Nimble", package: "Nimble"),
-				.product(name: "Quick", package: "Quick")
+                .product(name: "Numerics", package: "swift-numerics")
 			],
 			resources: [
-				.copy("Mocks")
-			]
+				.copy("Fixtures/Mocks")
+			],
+            swiftSettings: [.interoperabilityMode(.Cxx)]
 		)
-	]
+	],
+    cxxLanguageStandard: .cxx17
 )
-
-#if swift(>=5.6)
-package.dependencies.append(
-	.package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0")
-)
-#endif
